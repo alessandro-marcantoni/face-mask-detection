@@ -27,9 +27,9 @@ The inference process is made up of two steps:
 The **webcam inference** has been tested on the following machines:
 
 * Macbook Pro 2018 (i5@2.3GHz)
-    * inference time: 0.080ms - 0.090ms
+    * inference time: 0.020ms - 0.030ms
 * iMac 27'' 2017 (i5@3.4GHz)
-    * inference time: 0.040ms - 0.050ms
+    * inference time: 0.015ms - 0.020ms
 
 ### Credits
 * https://github.com/610265158/DSFD-tensorflow/tree/tf2 for the face detection model
