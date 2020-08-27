@@ -20,14 +20,14 @@ class FaceMaskDetector:
 
         # Definition of the Face Detection interpreter.
         self.face_target_shape = (320, 320)
-        self.face_interpreter = tflite(model_path="models/detector.tflite")
+        self.face_interpreter = tflite.Interpreter(model_path="models/detector.tflite")
         self.face_interpreter.allocate_tensors()
         self.face_input_details = self.face_interpreter.get_input_details()
         self.face_output_details = self.face_interpreter.get_output_details()
 
         # Definition of the Mask Detection Interpreter.
         self.mask_target_shape = (224, 224)
-        self.mask_interpreter = tflite(model_path="models/mask_detector.tflite")
+        self.mask_interpreter = tflite.Interpreter(model_path="models/mask_detector.tflite")
         self.mask_interpreter.allocate_tensors()
         self.mask_input_details = self.mask_interpreter.get_input_details()
         self.mask_output_details = self.mask_interpreter.get_output_details()
