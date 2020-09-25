@@ -2,13 +2,16 @@ import tflite_runtime.interpreter as tflite
 import numpy as np
 import cv2
 import time
+import math
+from itertools import combinations
 
-threshold = 0.6
+DISTANCE = 0.05
+threshold = 0.5
 person_class = 0
 camera_width = 640
 camera_height = 480
 
-interpreter = tflite.Interpreter("/tmp/detect.tflite")
+interpreter = tflite.Interpreter("./models/detect.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
@@ -37,16 +40,35 @@ def detect_people(frame):
 	return people
 
 def annotate_people(frame, people, camera_height, camera_width):
-	for person in people:
+	centroids = dict()
+	for n, person in enumerate(people):
+		ymin, xmin, ymax, xmax = person["bounding_box"]
+		cX = (xmin + xmax) / 2.0
+		cY = (ymin + ymax) / 2.0
+		centroids[n] = (cX, cY)
+	
+	people_at_risk = set()
+	for (id1, centroid1), (id2, centroid2) in combinations(centroids.items(), 2):
+		dx, dy = centroid1[0] - centroid2[0], centroid1[1] - centroid2[1]
+		distance = math.sqrt(dx * dx + dy * dy)
+		if distance < DISTANCE:
+			people_at_risk.add(id1)
+			people_at_risk.add(id2)
+	
+	for n, person in enumerate(people):
 		ymin, xmin, ymax, xmax = person["bounding_box"]
 		xmin = int(xmin * camera_width)
 		xmax = int(xmax * camera_width)
 		ymin = int(ymin * camera_height)
 		ymax = int(ymax * camera_height)
-		cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 0, 0), 2)
-	return frame	
+		if n in people_at_risk:
+			cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 0, 0), 2)
+		else:
+			cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+		
+	return frame
 
-cam = cv2.VideoCapture(0)
+cam = cv2.VideoCapture("./samples/example.mp4")
 rval, frame = cam.read() if cam.isOpened() else False, None
 		
 

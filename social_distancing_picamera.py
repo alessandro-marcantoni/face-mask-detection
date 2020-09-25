@@ -4,15 +4,17 @@ import cv2
 import time
 import picamera
 import io
+import math
 from PIL import Image
 from utils.annotation import Annotator
+from itertools import combinations
 
 threshold = 0.6
 person_class = 0
 camera_width = 640
 camera_height = 480
 
-interpreter = tflite.Interpreter("/tmp/detect.tflite")
+interpreter = tflite.Interpreter("./models/detect.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
@@ -41,13 +43,31 @@ def detect_people(frame):
 	return people
 
 def annotate_people(annotator, people):
-	for person in people:
+	centroids = dict()
+	for n, person in enumerate(people):
+		ymin, xmin, ymax, xmax = person["bounding_box"]
+		cX = (xmin + xmax) / 2.0
+		cY = (ymin + ymax) / 2.0
+		centroids[n] = (cX, cY)
+	
+	people_at_risk = set()
+	for (id1, centroid1), (id2, centroid2) in combinations(centroids.items(), 2):
+		dx, dy = centroid1[0] - centroid2[0], centroid1[1] - centroid2[1]
+		distance = math.sqrt(dx * dx + dy * dy)
+		if distance < 0.5:
+			people_at_risk.add(id1)
+			people_at_risk.add(id2)
+	
+	for n, person in enumerate(people):
 		ymin, xmin, ymax, xmax = person["bounding_box"]
 		xmin = int(xmin * camera_width)
 		xmax = int(xmax * camera_width)
 		ymin = int(ymin * camera_height)
 		ymax = int(ymax * camera_height)
-		annotator.bounding_box([xmin, ymin, xmax, ymax])
+		if n in people_at_risk:
+			annotator.bounding_box([xmin, ymin, xmax, ymax], outline="red")
+		else:
+			annotator.bounding_box([xmin, ymin, xmax, ymax], outline="green")
 		
 with picamera.PiCamera(resolution=(camera_width, camera_height), framerate=30) as camera:
 	camera.start_preview()
