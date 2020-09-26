@@ -2,6 +2,13 @@ import cv2
 import tflite_runtime.interpreter as tflite
 import numpy as np
 import time
+import picamera
+import io
+from utils.annotation import Annotator
+from PIL import Image
+
+camera_width = 1000
+camera_height = 500
 
 class FaceMaskDetector:
     """
@@ -217,8 +224,10 @@ class FaceMaskDetector:
                 face_image = image[y1 : y2, x1 : x2]
                 output_info = self.face_mask_inference(face_image)
                 output_class = np.argmax(output_info)
-                cv2.rectangle(image, (x1, y1), (x2, y2), self.color_map[output_class], 2)
-                cv2.putText(image, self.class_map[output_class], (x1+2, y1-2), cv2.FONT_HERSHEY_SIMPLEX, 0.8, self.color_map[output_class])
+                annotator.bounding_box([x1, y1, x2, y2], outline=self.color_map[output_class])
+                annotator.text([x1+2, y1-2], self.class_map[output_class], color=self.color_map[output_class])
+                #cv2.rectangle(image, (x1, y1), (x2, y2), self.color_map[output_class], 2)
+                #cv2.putText(image, self.class_map[output_class], (x1+2, y1-2), cv2.FONT_HERSHEY_SIMPLEX, 0.8, self.color_map[output_class])
         return image
 
 if __name__ == "__main__":
@@ -227,12 +236,30 @@ if __name__ == "__main__":
     """
     face_mask_detector = FaceMaskDetector()
 
-    # Creates a new window and starts the webcam stream.
-    cv2.namedWindow("preview")
-    vc = cv2.VideoCapture(0)
-    fps = vc.get(cv2.CAP_PROP_FPS)
-
-    rval, frame = vc.read() if vc.isOpened() else False, None
+    with picamera.PiCamera(resolution=(camera_width, camera_height), framerate=30) as camera:
+        camera.start_preview()
+        try:
+            stream = io.BytesIO()
+            annotator = Annotator(camera)
+            for _ in camera.capture_continuous(stream, format="jpeg", use_video_port=True):
+                stream.seek(0)
+                frame = Image.open(stream).convert("RGB")
+                frame = np.array(frame)
+                
+                inference_start = time.time()
+                boxes = face_mask_detector.detect_faces(frame)
+                annotator.clear()
+                face_mask_detector.detect_masks(frame, boxes)
+                inference_stop = time.time()
+                
+                annotator.text([5, 0], "infer time: %.3f s" % (inference_stop - inference_start))
+                annotator.update()
+                
+                stream.seek(0)
+                stream.truncate()
+        finally:
+            camera.stop_preview()
+                
     
     ''' 
     Main loop:
@@ -241,7 +268,7 @@ if __name__ == "__main__":
         * Detects masks.
         * Visualize output.
     '''
-    while rval:
+    '''while rval:
         loop_start = time.time()
         rval, frame = vc.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -260,4 +287,4 @@ if __name__ == "__main__":
         
 
     vc.release()
-    cv2.destroyWindow("preview")
+    cv2.destroyWindow("preview")'''
