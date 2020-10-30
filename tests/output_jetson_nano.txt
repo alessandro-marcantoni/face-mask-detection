@@ -1,0 +1,15 @@
+           Accuracy: 0.8130841121495327 
+
+Precision face-mask: 0.9111111111111111
+     Precision face: 0.29411764705882354 
+
+   Recall face-mask: 0.8723404255319149
+        Recall face: 0.38461538461538464 
+
+       F1 face-mask: 0.891304347826087
+            F1 face: 0.33333333333333337 
+
+     Total Accuracy: 0.23157894736842105 
+
+     Total Time (s): 13.853662490844727
+   Average Time (s): 0.14582802621941818
